@@ -154,12 +154,14 @@ class PulsarJob:
 
         return data
     
-    def move_file_to_archive(self, current_path=None, archive_path=None): 
+    def move_file_to_archive(self, current_path=None, archive_path=None,hdfs_location =None): 
 
         if current_path is None:
             current_path = self.dir_files
         if archive_path is None:
             archive_path = '/'.join(self.dir_files.split('/') [:-1])  + '/archive/' +dir_files.split('/')[-1]
+        if hdfs_location is None:
+            hdfs_location = self.hdfs_location
 
         hdfs_client = InsecureClient(hdfs_location)
 
