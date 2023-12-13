@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # file ------------------------------------
     hdfs_title = 'hdfs://njbbvmaspd11.nss.vzwnet.com:9000'
 
-    date_str = (date.today() - timedelta(10)).strftime("%Y-%m-%d")
+    date_str = (date.today() - timedelta(7)).strftime("%Y-%m-%d")
     file_path = hdfs_title + f"/user/Charlotte/activation_report/Act_Report_{date_str}"
 
     df = spark.read.format("csv")\
