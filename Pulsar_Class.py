@@ -86,7 +86,7 @@ class PulsarJob:
         self.consumer = None 
         self.dir_files = dir_files
         self.hdfs_location = hdfs_location
-        self.archive_path  = '/'.join(self.dir_files.split('/') [:-1])  + '/archive/' +self.dir_files.split('/')[-1]
+        #self.archive_path  = '/'.join(self.dir_files.split('/') [:-1])  + '/archive/' +self.dir_files.split('/')[-1]
         self.client = self.setup_client()
 
     def setup_client(self, vmb_host=None, capath=None, cetpath=None, keypath=None):
@@ -160,7 +160,7 @@ class PulsarJob:
         if current_path is None:
             current_path = self.dir_files
         if archive_path is None:
-            archive_path = self.archive_path
+            archive_path =  '/'.join(self.dir_files.split('/') [:-1])  + '/archive/' +self.dir_files.split('/')[-1]
         if hdfs_location is None:
             hdfs_location = self.hdfs_location
 
