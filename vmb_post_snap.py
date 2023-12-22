@@ -128,7 +128,7 @@ if __name__ == "__main__":
     date_val = ( datetime.now().date() - timedelta(1) ).strftime("%Y-%m-%d")
 
 
-    read_path = "/user/ZheS/Event_Enodeb_Post_tickets_Feature_Date/{}_tickets_Post_Feature_of_Enodeb"
+    read_path = "/user/ZheS/MonitorEnodebPef/enodeb/Event_Enodeb_Post_tickets_Feature_Date/{}_tickets_Post_Feature_of_Enodeb"
     save_path = f"/user/ZheS/SNAP_Enodeb/VMB/VMAS-Post-SNAP-Maintenance-Alert/json_abnormal_enodeb-{date_val}.json"
     inst = ConvertDfJson(date_val,
                             read_path,
@@ -187,4 +187,5 @@ if __name__ == "__main__":
     if data is None:
         mail_sender.send(text=f"Failled!!!!!")
     else:
-        mail_sender.send(text=f"script at /usr/apps/vmas/scripts/ZS/snap/VMAS-Post-SNAP-Maintenance-Alert/n {data}") 
+        mail_sender.send(subject="vmb_post_snap script Successful",
+                         text=f"script at /usr/apps/vmas/scripts/ZS/snap/VMAS-Post-SNAP-Maintenance-Alert/n {data}") 
