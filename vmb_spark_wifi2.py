@@ -36,10 +36,9 @@ if __name__ == "__main__":
     models = models_vcg + models_vbg
 
     df2 = spark.read.parquet(hdfs_title + f"/user/ZheS/wifi_score_v2/homeScore_dataframe/{date_str}")
-    df2 = df2.select("serial_num",'mdn','cust_id','poor_rssi','poor_phyrate','home_score','date', 
-                F.explode("dg_model").alias("dg_model_indiv") )\
-            .select("serial_num",'mdn','cust_id','poor_rssi','poor_phyrate','home_score','date', F.explode("dg_model_indiv").alias("dg_model_indiv") )\
-            .dropDuplicates( ["serial_num","dg_model_indiv"] )
+    df2 = df2.withColumn( "dg_model_indiv", F.explode("dg_model")   )\
+            .withColumn( "dg_model_indiv", F.explode("dg_model_indiv")   )\
+            .select("serial_num",'mdn','cust_id','date','poor_rssi','poor_phyrate',"num_station",'home_score',"dg_model_indiv")
 
     df_vcg = df2.filter( col("dg_model_indiv").isin(models_vcg) )\
                 .selectExpr("to_json(struct(*)) AS value")
