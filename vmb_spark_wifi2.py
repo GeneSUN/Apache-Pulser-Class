@@ -77,17 +77,24 @@ if __name__ == "__main__":
     #
     pulsar_topic = "persistent://cktv/5g-home-router-wifi-scoring-performance/VMAS-5G-Home-Router-WIFI-Scoring-Performance-daily"
     vmbHost_np = "pulsar+ssl://vmb-aws-us-east-1-nonprod.verizon.com:6651/"
+    vmbHost    = "pulsar+ssl://vmb-aws-us-east-1-prod.verizon.com:6651/"
     key_path = "/usr/apps/vmas/cert/cktv/"
 
     cetpath = key_path + "cktv.cert.pem"
     keypath = key_path + "cktv.key-pk8.pem"
     capath = key_path + "ca.cert.pem"
     job_nonprod = PulsarJob( pulsar_topic ,
-                    vmbHost_np, 
-                    cetpath, 
-                    keypath, 
-                    capath
-                )
+                                vmbHost_np, 
+                                cetpath, 
+                                keypath, 
+                                capath
+                            )
+    job_prod = PulsarJob( pulsar_topic ,
+                            vmbHost, 
+                            cetpath, 
+                            keypath, 
+                            capath
+                        )
     data = job_nonprod.setup_consumer()
     mail_sender.send(text = data)
 
