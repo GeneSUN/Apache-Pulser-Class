@@ -53,6 +53,7 @@ if __name__ == "__main__":
         StructField('date', StringType(),True),
         StructField("poor_rssi" , FloatType(), True),
         StructField("poor_phyrate" , FloatType(), True),
+        StructField("num_station" , FloatType(), True),
         StructField("home_score" , FloatType(), True),
         StructField("dg_model_indiv" , StringType(), True),
 
