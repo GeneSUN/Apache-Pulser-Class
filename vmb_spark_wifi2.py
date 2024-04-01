@@ -28,17 +28,17 @@ if __name__ == "__main__":
     # file ------------------------------------
     hdfs_title = 'hdfs://njbbvmaspd11.nss.vzwnet.com:9000'
     date_str = (date.today() - timedelta(1)).strftime("%Y-%m-%d")
-    #date_str = "2023-12-13"
-    
 
     models_vcg = ['ASK-NCQ1338', 'ASK-NCQ1338FA', 'XCI55AX','CR1000A','WNC-CR200A']
     models_vbg = ['FSNO21VA','ASK-NCM1100E','ASK-NCQ1338E']
     models = models_vcg + models_vbg
 
-    df2 = spark.read.parquet(hdfs_title + f"/user/ZheS/wifi_score_v2/homeScore_dataframe/{date_str}")
+    df2 = spark.read.parquet(hdfs_title + f"/user/ZheS/wifi_score_v3/homeScore_dataframe/{date_str}")
     df2 = df2.withColumn( "dg_model_indiv", F.explode("dg_model")   )\
             .withColumn( "dg_model_indiv", F.explode("dg_model_indiv")   )\
-            .select("serial_num",'mdn','cust_id','date','poor_rssi','poor_phyrate',"num_station",'home_score',"dg_model_indiv")
+            .select("serial_num",'mdn','cust_id','date','poor_rssi','poor_phyrate',"num_station",'home_score',"dg_model_indiv")\
+            .dropDuplicates()\
+            .fillna({"mdn":"0000000000","cust_id":"000000000"})
 
     df_vcg = df2.filter( col("dg_model_indiv").isin(models_vcg) )\
                 .selectExpr("to_json(struct(*)) AS value")
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     cetpath = key_path + "cktv.cert.pem"
     keypath = key_path + "cktv.key-pk8.pem"
     capath = key_path + "ca.cert.pem"
-
+    
     df_vcg.write.format("pulsar") \
         .option("service.url", vmbHost_np) \
         .option("pulsar.client.authPluginClassName","org.apache.pulsar.client.impl.auth.AuthenticationTls") \
@@ -62,18 +62,17 @@ if __name__ == "__main__":
         .option("pulsar.client.tlsHostnameVerificationenable","false") \
         .option("topic", pulsar_topic) \
         .save()
-
-    df_vcg.write.format("pulsar") \
-        .option("service.url", vmbHost) \
-        .option("pulsar.client.authPluginClassName","org.apache.pulsar.client.impl.auth.AuthenticationTls") \
-        .option("pulsar.client.authParams",f"tlsCertFile:{cetpath},tlsKeyFile:{keypath}") \
-        .option("pulsar.client.tlsTrustCertsFilePath",capath) \
-        .option("pulsar.client.useTls","true") \
-        .option("pulsar.client.tlsAllowInsecureConnection","false") \
-        .option("pulsar.client.tlsHostnameVerificationenable","false") \
-        .option("topic", pulsar_topic) \
+    
+    df_vcg.write.format("pulsar")\
+        .option("service.url", vmbHost)\
+        .option("pulsar.client.authPluginClassName","org.apache.pulsar.client.impl.auth.AuthenticationTls")\
+        .option("pulsar.client.authParams",f"tlsCertFile:{cetpath},tlsKeyFile:{keypath}")\
+        .option("pulsar.client.tlsTrustCertsFilePath",capath)\
+        .option("pulsar.client.useTls","true")\
+        .option("pulsar.client.tlsAllowInsecureConnection","false")\
+        .option("pulsar.client.tlsHostnameVerificationenable","false")\
+        .option("topic", pulsar_topic)\
         .save()
-    #
 
     job_nonprod = PulsarJob( pulsar_topic ,
                                 vmbHost_np, 
@@ -84,4 +83,10 @@ if __name__ == "__main__":
 
     data = job_nonprod.setup_consumer()
     mail_sender.send(text = data)
+
+    sys.exit()
+
+
+
+
 
