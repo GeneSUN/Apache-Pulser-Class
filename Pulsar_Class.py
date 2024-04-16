@@ -86,7 +86,7 @@ class PulsarJob:
         self.consumer = None 
         self.dir_files = dir_files
         self.hdfs_location = hdfs_location
-        #self.archive_path  = '/'.join(self.dir_files.split('/') [:-1])  + '/archive/' +self.dir_files.split('/')[-1]
+        self.archive_path  = '/'.join(self.dir_files.split('/') [:-1])  + '/archive/' +self.dir_files.split('/')[-1]
         self.client = self.setup_client()
 
     def setup_client(self, vmb_host=None, capath=None, cetpath=None, keypath=None):
@@ -160,7 +160,7 @@ class PulsarJob:
         if current_path is None:
             current_path = self.dir_files
         if archive_path is None:
-            archive_path =  '/'.join(self.dir_files.split('/') [:-1])  + '/archive/' +self.dir_files.split('/')[-1]
+            archive_path = self.archive_path
         if hdfs_location is None:
             hdfs_location = self.hdfs_location
 
@@ -170,13 +170,10 @@ class PulsarJob:
             hdfs_client.rename(current_path, archive_path) 
             if not hdfs_client.status(current_path, strict=False): 
                 print(f"File has been moved to the archive directory: {archive_path}") 
-                return f"File has been moved to the archive directory: {archive_path}"
             else: 
-                print("Error: File move failed.") 
-                return "Error: File move failed."
+                print("File move failed.") 
         except Exception as e: 
             print(f"Error moving file: {e}") 
-            return f"Error moving file: {e}"
 
 if __name__ == "__main__":
     # the only input is the date which is used to generate 'date_range'
