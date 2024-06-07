@@ -5,74 +5,14 @@ from pyspark.sql import SparkSession
 from pulsar import Client, AuthenticationTLS, ConsumerType, InitialPosition
 
 from datetime import datetime, timedelta, date 
-
 import argparse 
-
 import json
 
 from hdfs import InsecureClient 
 from pyspark.sql import SparkSession 
 
-import argparse 
-
-import pandas as pd 
-
-import smtplib
-from email.mime.text import MIMEText
-from email import encoders
-from email.mime.base import MIMEBase
-from email.mime.multipart import MIMEMultipart
-from email.utils import COMMASPACE, formatdate
-
-import pandas as pd
-
 from hdfs import InsecureClient 
 import os
-
-def get_date_window(start_date,  days = 1,end_time = None,  direction = "backward", formation ="str"): 
-    from datetime import datetime, timedelta, date
-    # Calculate the end date and start_date--------------------------------------
-    
-    start_date = datetime.strptime(start_date, "%Y-%m-%d")
-    
-    if end_time is None:
-        if direction.lower() == 'forward': 
-            end_date = start_date + timedelta(days=days)  
-        elif direction.lower() == 'backward': 
-            end_date = start_date - timedelta(days=days) 
-        else: 
-            raise ValueError("Invalid direction argument. Use 'forward' or 'backward'.")
-    else:
-        end_date = datetime.strptime(end_time, "%Y-%m-%d")
-        if end_date > start_date:
-            direction = "forward"
-        else:
-            direction = "backward"
-
-    # Generate the date range and format them as strings -------------------------------
-    date_list = []
-    if direction.lower() == 'backward':
-        while end_date <= start_date: 
-            date_string = end_date.strftime("%Y-%m-%d") 
-            date_list.insert(0, date_string)  # Insert at the beginning to make it descending 
-            end_date += timedelta(days=1) 
-                
-    if direction.lower() == 'forward':
-        while end_date >= start_date: 
-            date_string = end_date.strftime("%Y-%m-%d") 
-            date_list.insert(0, date_string)  # Insert at the beginning to make it descending 
-            end_date -= timedelta(days=1) 
-    
-    if formation == "datetime":
-        # Convert date strings to date objects using list comprehension 
-        date_list = [datetime.strptime(date_string, "%Y-%m-%d").date() for date_string in date_list] 
-    elif formation == "timestamp":
-        # Convert date objects to timestamps using list comprehension
-        date_list = [ datetime.timestamp(datetime.strptime(date_string, "%Y-%m-%d")) for date_string in date_list] 
-    else:
-        pass
-    
-    return date_list
 
 class PulsarJob:
 
@@ -86,7 +26,7 @@ class PulsarJob:
         self.consumer = None 
         self.dir_files = dir_files
         self.hdfs_location = hdfs_location
-        self.archive_path  = '/'.join(self.dir_files.split('/') [:-1])  + '/archive/' +self.dir_files.split('/')[-1]
+        #self.archive_path  = '/'.join(self.dir_files.split('/') [:-1])  + '/archive/' +self.dir_files.split('/')[-1]
         self.client = self.setup_client()
 
     def setup_client(self, vmb_host=None, capath=None, cetpath=None, keypath=None):
@@ -139,7 +79,7 @@ class PulsarJob:
         if client is None:
             client = self.client
             
-        consumer = client.subscribe(pulsar_topic, 'vmas_test',consumer_type = ConsumerType.Shared)
+        consumer = client.subscribe(pulsar_topic, 'vmas_test_zhes',consumer_type = ConsumerType.Shared)
 
         msg = consumer.receive()
         try:
@@ -160,7 +100,7 @@ class PulsarJob:
         if current_path is None:
             current_path = self.dir_files
         if archive_path is None:
-            archive_path = self.archive_path
+            archive_path =  '/'.join(self.dir_files.split('/') [:-1])  + '/archive/' +self.dir_files.split('/')[-1]
         if hdfs_location is None:
             hdfs_location = self.hdfs_location
 
@@ -170,10 +110,66 @@ class PulsarJob:
             hdfs_client.rename(current_path, archive_path) 
             if not hdfs_client.status(current_path, strict=False): 
                 print(f"File has been moved to the archive directory: {archive_path}") 
+                return f"File has been moved to the archive directory: {archive_path}"
             else: 
-                print("File move failed.") 
+                print("Error: File move failed.") 
+                return "Error: File move failed."
         except Exception as e: 
             print(f"Error moving file: {e}") 
+            return f"Error moving file: {e}"
+
+
+class SparkToPulsar: 
+
+    def __init__(self, file_path, pulsar_topic, vmb_host): 
+        self.spark = SparkSession.builder.appName('VMB-wifi-score').getOrCreate()
+        self.file_path = file_path 
+        self.pulsar_topic = pulsar_topic 
+        self.vmb_host = vmb_host 
+        self.main_path = "/usr/apps/vmas/cert/cktv/"
+        self.cert_path = self.main_path + "cktv.cert.pem"
+        self.key_path = self.main_path + "cktv.key-pk8.pem"
+        self.ca_path = self.main_path + "ca.cert.pem"
+
+    def read_data(self): 
+        
+        df = self.spark.read.parquet(self.file_path) 
+        return df 
+ 
+    def process_data(self, df): 
+
+        return df 
+
+    def write_data(self, df): 
+
+        df.write.format("pulsar")\
+            .option("service.url", self.vmb_host)\
+            .option("pulsar.client.authPluginClassName","org.apache.pulsar.client.impl.auth.AuthenticationTls")\
+            .option("pulsar.client.authParams",f"tlsCertFile:{self.cert_path},tlsKeyFile:{self.key_path}")\
+            .option("pulsar.client.tlsTrustCertsFilePath",self.ca_path)\
+            .option("pulsar.client.useTls","true")\
+            .option("pulsar.client.tlsAllowInsecureConnection","false")\
+            .option("pulsar.client.tlsHostnameVerificationenable","false")\
+            .option("topic", self.pulsar_topic)\
+            .save()
+
+    def run(self): 
+        df = self.read_data()
+        df = self.process_data(df) 
+        df.show()
+        self.write_data(df) 
+
+    def consume_data(self):
+        from Pulsar_Class import PulsarJob
+        job_nonprod = PulsarJob( self.pulsar_topic ,
+                                    self.vmb_host, 
+                                    self.cert_path , 
+                                    self.key_path, 
+                                    self.ca_path
+                                )
+        data = job_nonprod.setup_consumer()
+
+        return data
 
 if __name__ == "__main__":
     # the only input is the date which is used to generate 'date_range'
