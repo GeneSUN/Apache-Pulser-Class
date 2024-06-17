@@ -34,7 +34,7 @@ def custom_nonprod_process_data(self,df):
 
 def custom_prod_process_data(self,df):
             
-    models_vcg = ['ASKNCQ138', 'ASKNCQ138FA', 'XC1X5X', 'CR100EA', 'WNC-CR200A'] 
+    models_vcg = ['ASKNCQ138', 'ASKNCQ138FA', 'XCI55AX', 'CR100EA', 'WNC-CR200A'] 
     df = df.withColumn( "dg_model_indiv", F.explode("dg_model")   )\
             .withColumn( "dg_model_indiv", F.explode("dg_model_indiv")   )\
             .select("serial_num",'mdn','cust_id','date','poor_rssi','poor_phyrate',"num_station",'home_score',"dg_model_indiv")\
