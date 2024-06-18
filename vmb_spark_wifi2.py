@@ -12,7 +12,8 @@ import json
 import sys 
 sys.path.append('/usr/apps/vmas/script/ZS') 
 from MailSender import MailSender
-from Pulsar_Class import PulsarJob, SparkToPulsar
+from Pulsar_Class import PulsarJob
+from Pulsar_Class import SparkToPulsar
 import argparse
 from datetime import datetime, timedelta, date
 import pyspark.sql.functions as F
@@ -20,7 +21,7 @@ import types
 
 def custom_nonprod_process_data(self,df):
             
-    models_vcg = ['ASKNCQ138', 'ASKNCQ138FA', 'XC1X5X', 'CR100EA', 'WNC-CR200A'] 
+    models_vcg = ['ASK-NCQ1338', 'ASK-NCQ1338FA', 'XCI55AX','CR1000A','WNC-CR200A']
     df = df.withColumn( "dg_model_indiv", F.explode("dg_model")   )\
             .withColumn( "dg_model_indiv", F.explode("dg_model_indiv")   )\
             .select("serial_num",'mdn','cust_id','date')\
@@ -34,7 +35,7 @@ def custom_nonprod_process_data(self,df):
 
 def custom_prod_process_data(self,df):
             
-    models_vcg = ['ASKNCQ138', 'ASKNCQ138FA', 'XCI55AX', 'CR100EA', 'WNC-CR200A'] 
+    models_vcg = ['ASK-NCQ1338', 'ASK-NCQ1338FA', 'XCI55AX','CR1000A','WNC-CR200A']
     df = df.withColumn( "dg_model_indiv", F.explode("dg_model")   )\
             .withColumn( "dg_model_indiv", F.explode("dg_model_indiv")   )\
             .select("serial_num",'mdn','cust_id','date','poor_rssi','poor_phyrate',"num_station",'home_score',"dg_model_indiv")\
