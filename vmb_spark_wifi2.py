@@ -21,7 +21,7 @@ import types
 
 def custom_nonprod_process_data(self,df):
             
-    models_vcg = ['ASK-NCQ1338', 'ASK-NCQ1338FA', 'XCI55AX','CR1000A','WNC-CR200A']
+    models_vcg = ['ASK-NCQ1338', 'ASK-NCQ1338FA', 'XCI55AX','CR1000A','WNC-CR200A','ASK-NCM1100']
     df = df.withColumn( "dg_model_indiv", F.explode("dg_model")   )\
             .withColumn( "dg_model_indiv", F.explode("dg_model_indiv")   )\
             .select("serial_num",'mdn','cust_id','date')\
@@ -35,7 +35,7 @@ def custom_nonprod_process_data(self,df):
 
 def custom_prod_process_data(self,df):
             
-    models_vcg = ['ASK-NCQ1338', 'ASK-NCQ1338FA', 'XCI55AX','CR1000A','WNC-CR200A']
+    models_vcg = ['ASK-NCQ1338', 'ASK-NCQ1338FA', 'XCI55AX','CR1000A','WNC-CR200A','ASK-NCM1100']
     df = df.withColumn( "dg_model_indiv", F.explode("dg_model")   )\
             .withColumn( "dg_model_indiv", F.explode("dg_model_indiv")   )\
             .select("serial_num",'mdn','cust_id','date','poor_rssi','poor_phyrate',"num_station",'home_score',"dg_model_indiv")\
@@ -60,6 +60,11 @@ if __name__ == "__main__":
     vmb_host    = "pulsar+ssl://vmb-aws-us-east-1-prod.verizon.com:6651/"
 
     try:    
+
+        wifiScore_prod = SparkToPulsar(file_path, pulsar_topic, vmb_host) 
+        wifiScore_prod.process_data = types.MethodType(custom_prod_process_data,wifiScore_prod)
+        wifiScore_prod.run() 
+        
         wifiScore_nonprod = SparkToPulsar(file_path, pulsar_topic, vmb_host_np) 
         wifiScore_nonprod.process_data = types.MethodType(custom_nonprod_process_data,wifiScore_nonprod)
         wifiScore_nonprod.run() 
@@ -68,14 +73,11 @@ if __name__ == "__main__":
                         subject = f"vmb_spark_wifi succeed at {date_str}",
                         text = data)
 
-        wifiScore_prod = SparkToPulsar(file_path, pulsar_topic, vmb_host) 
-        wifiScore_prod.process_data = types.MethodType(custom_prod_process_data,wifiScore_prod)
-        wifiScore_prod.run() 
+
 
     except Exception as e:
         print(e)
         mail_sender.send( send_from ="vmb_spark_wifi@verizon.com", 
                 text = e,
                         subject = f"vmb_spark_wifi nonprod failed !!! at {date_str}")
-
 
