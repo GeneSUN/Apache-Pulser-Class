@@ -16,11 +16,14 @@ from Pulsar_Class import PulsarJob, get_date_window
 import argparse
 from datetime import datetime, timedelta, date
 
+import time 
+ 
 class ConvertDfJson: 
     global hdfs_title, tickets_list, features_list, alert_feature_list,selected_feature
     hdfs_title = "hdfs://njbbvmaspd11.nss.vzwnet.com:9000/"
     tickets_list = ["nrb_ticket_counts","w360_ticket_counts"]
-    features_list = ['sip_dc_rate', 'context_drop_rate', 'bearer_drop_voice_rate', 'bearer_setup_failure_rate', 'avgconnected_users', 'dl_data_volume', 'uptp_user_perceived_throughput', 'packet_retransmission_rate', 'packet_loss_rate', 'rrc_setup_failure', 'bearer_drop_rate']
+    #features_list = ['sip_dc_rate', 'context_drop_rate', 'bearer_drop_voice_rate', 'bearer_setup_failure_rate', 'avgconnected_users', 'dl_data_volume', 'uptp_user_perceived_throughput', 'packet_retransmission_rate', 'packet_loss_rate', 'rrc_setup_failure', 'bearer_drop_rate']
+    features_list =  ['sip_dc_rate', 'rrc_setup_failure', 'bearer_drop_rate',"rtp_gap",'avgconnected_users', 'dl_data_volume','uptp_user_perceived_throughput']
     
     alert_feature_list = [  f"{feature}_alert"  for feature in features_list]
     selected_feature = ["enodeb","day","event_day","site","region","abnormal_kpi"] + features_list + tickets_list + alert_feature_list
@@ -119,7 +122,10 @@ class ConvertDfJson:
 
 if __name__ == "__main__":
     # the only input is the date which is used to generate 'date_range'
-    spark = SparkSession.builder.appName('Push_SNAP_abnormal_enodeb_to_vmb').enableHiveSupport().getOrCreate()
+    spark = SparkSession.builder.appName('Push_SNAP_abnormal_enodeb_to_vmb')\
+                        .master("spark://njbbvmaspd11.nss.vzwnet.com:7077")\
+                        .config("spark.ui.port","24040")\
+                        .enableHiveSupport().getOrCreate()
     mail_sender = MailSender() 
 
 
@@ -138,22 +144,17 @@ if __name__ == "__main__":
     pulsar_topic = "persistent://cktv/post-snap-maintenance-alert/VMAS-Post-SNAP-Maintenance-Alert"
     vmbHost_np = "pulsar+ssl://vmb-aws-us-east-1-nonprod.verizon.com:6651/"
     vmbHost = "pulsar+ssl://vmb-aws-us-east-1-prod.verizon.com:6651/"
+    
     key_folder = "/usr/apps/vmas/scripts/ZS/snap/VMAS-Post-SNAP-Maintenance-Alert/"
     cetpath = key_folder + "cktv.cert.pem"
     keypath = key_folder + "cktv.key-pk8.pem"
     capath = key_folder + "ca.cert.pem"
+    """
 
+
+    """
     try:
-        job_nonprod = PulsarJob( pulsar_topic ,
-                            vmbHost_np, 
-                            cetpath, 
-                            keypath, 
-                            capath,
-                            save_path, 
-                            hdfs_location
-                        )
-        job_nonprod.setup_producer()
-
+        
         job_prod = PulsarJob( pulsar_topic ,
                             vmbHost, 
                             cetpath, 
@@ -163,29 +164,51 @@ if __name__ == "__main__":
                             hdfs_location
                         )
         job_prod.setup_producer()
-
-        job_nonprod.move_file_to_archive()
-
+        
+        job_prod = PulsarJob( pulsar_topic ,
+                        vmbHost, 
+                        cetpath, 
+                        keypath, 
+                        capath,
+                        save_path, 
+                        hdfs_location
+                    )
+        data = job_prod.setup_consumer()
+        if data is None:
+            mail_sender.send(text=f"Failled!!!!!")
+        else:
+            mail_sender.send(subject="vmb_post_snap script Successful",
+                            text=f"script at /usr/apps/vmas/scripts/ZS/snap/VMAS-Post-SNAP-Maintenance-Alert/n {data}") 
         #data = job1.setup_consumer(); mail_sender.send(text=f"script at /usr/apps/vmas/scripts/ZS/snap/VMAS-Post-SNAP-Maintenance-Alert/n {data}") 
     except Exception as e:
         
         mail_sender.send(send_from="sassupport@verizon.com", 
                         send_to=["zhe.sun@verizonwireless.com"], 
-                        subject="vmb_post_snap script failed", 
+                        subject="vmb_post_snap consumer failed", 
                         cc=[], 
                         text=f"script at /usr/apps/vmas/scripts/ZS/snap/VMAS-Post-SNAP-Maintenance-Alert/n {e}") 
 
-    job_nonprod = PulsarJob( pulsar_topic ,
-                    vmbHost_np, 
-                    cetpath, 
-                    keypath, 
-                    capath,
-                    save_path, 
-                    hdfs_location
-                )
-    data = job_nonprod.setup_consumer()
-    if data is None:
-        mail_sender.send(text=f"Failled!!!!!")
-    else:
-        mail_sender.send(subject="vmb_post_snap script Successful",
-                         text=f"script at /usr/apps/vmas/scripts/ZS/snap/VMAS-Post-SNAP-Maintenance-Alert/n {data}") 
+    start_time = "11:30" 
+    end_time = "20:30" 
+    start_datetime = datetime.strptime(start_time, "%H:%M") 
+    end_datetime = datetime.strptime(end_time, "%H:%M") 
+
+    while True: 
+        time.sleep(300)  # Optional: Adjust the sleep time to balance responsiveness and resource usage 
+        current_time = datetime.now().time() 
+        if start_datetime.time() <= current_time <= end_datetime.time(): 
+            job_prod = PulsarJob( pulsar_topic ,
+                        vmbHost, 
+                        cetpath, 
+                        keypath, 
+                        capath,
+                        save_path, 
+                        hdfs_location
+                    )
+            job_prod.setup_producer()
+        else:
+            break
+    
+    job_prod.move_file_to_archive()
+    """
+    """
